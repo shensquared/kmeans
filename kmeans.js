@@ -1,29 +1,40 @@
 // Initial inspiration was from: http://www.bytemuse.com/post/k-means-clustering-visualization/
-$(function() {
-
+$(function () {
   // Number of points to be used in the K-Means Visualization
   var NUM_POINTS = 500;
 
-  var $numClusters = $('#num-clusters');
+  var $numClusters = $("#num-clusters");
   var numClusters = parseInt($numClusters.val(), 10);
-  var $numCentroids = $('#num-centroids');
+  var $numCentroids = $("#num-centroids");
   var numCentroids = parseInt($numClusters.val(), 10);
 
-  var $rangeSlider = $('#range-slider');
-  var $meanSquareValue = $('.mean-square-value');
+  var $rangeSlider = $("#range-slider");
+  var $meanSquareValue = $(".mean-square-value");
 
-  var width = $('#kmeans-vis').width();
+  var width = $("#kmeans-vis").width();
   var height = width;
 
   // Create SVG for d3
-  var svg = d3.select('#kmeans-vis').append('svg')
-    .attr('width', width)
-    .attr('height', height);
+  var svg = d3
+    .select("#kmeans-vis")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height);
 
-  pointsGroup = svg.append('g').attr('id', 'points');
-  var centroidsGroup = svg.append('g').attr('id', 'centroids');
-  var voronoiGroup = svg.append('g').attr('id', 'voronoi');
-  var triangle = d3.svg.symbol().type('triangle-up').size(function(d) { return 200; });
+  pointsGroup = svg.append("g").attr("id", "points");
+  var centroidsGroup = svg.append("g").attr("id", "centroids");
+  var voronoiGroup = svg.append("g").attr("id", "voronoi");
+  var triangle = function (selection) {
+    selection
+      .append("image")
+      .attr("xlink:href", "path/to/your/food_truck_outline.svg") // Update with the actual path to your SVG
+      .attr("width", function (d) {
+        return Math.sqrt(200);
+      }) // Adjust size as needed
+      .attr("height", function (d) {
+        return Math.sqrt(200);
+      });
+  };
   var colors = d3.scale.category10();
 
   // Array of (x, y) points that will be classified
@@ -35,38 +46,38 @@ $(function() {
   // Initial randomness. This is what the slider is set to.
   // 0 means data is very clustered, 100 means completely random
   var randomness = 25;
-  var $step = $('.step');
+  var $step = $(".step");
 
   rangeSlider($rangeSlider[0], {
     value: randomness,
-    drag: function(value) {
+    drag: function (value) {
       // Update the randomness after the user drags the slider
       // and reset the points to be clustered
       randomness = value;
       resetPoints();
-    }
+    },
   });
 
   // Resets the text on the centroid button
   function resetCentroidUpdateText() {
-    $step.addClass('find');
-    $step.html('Find closest centroid');
+    $step.addClass("find");
+    $step.html("Update point assignment");
 
-    $('.active').removeClass('active');
-    $('.closest').addClass('active');
+    $(".active").removeClass("active");
+    $(".closest").addClass("active");
   }
 
   // Every time the step button is clicked, we alternate between finding the closest
   // centroid and updating the centroid
-  $step.click(function() {
-    if ($step.hasClass('find')) {
+  $step.click(function () {
+    if ($step.hasClass("find")) {
       findClosestCentroid();
       findClosestCentroidAnimation();
-      $step.removeClass('find');
-      $step.html('Update centroid');
+      $step.removeClass("find");
+      $step.html("Update centroid");
 
-      $('.active').removeClass('active');
-      $('.update').addClass('active');
+      $(".active").removeClass("active");
+      $(".update").addClass("active");
     } else {
       updateCentroid();
       updateCentroidAnimation();
@@ -74,48 +85,48 @@ $(function() {
     }
   });
 
-  $('.closest').on('click', function() {
-    if ($('.closest').hasClass('active')) {
+  $(".closest").on("click", function () {
+    if ($(".closest").hasClass("active")) {
       $step.click();
     }
   });
 
-  $('.update').on('click', function() {
-    if ($('.update').hasClass('active')) {
+  $(".update").on("click", function () {
+    if ($(".update").hasClass("active")) {
       $step.click();
     }
   });
 
-  $('.new-points').click(function() {
+  $(".new-points").click(function () {
     resetPoints();
   });
 
-  $numClusters.blur(function() {
+  $numClusters.blur(function () {
     var numClustersNew = parseInt($numClusters.val(), 10);
     if (!isNaN(numClustersNew) && numClustersNew != numClusters) {
       resetPoints();
     }
   });
 
-  $numCentroids.blur(function() {
+  $numCentroids.blur(function () {
     var numCentroidsNew = parseInt($numCentroids.val(), 10);
     if (!isNaN(numCentroidsNew) && numCentroidsNew != numCentroids) {
       generateClusters();
     }
   });
 
-  $('.new-centroids').click(function() {
+  $(".new-centroids").click(function () {
     generateClusters();
   });
 
-  $numClusters.blur(function() {
+  $numClusters.blur(function () {
     var numClustersNew = parseInt($numClusters.val(), 10);
     if (!isNaN(numClustersNew) && numClustersNew != numClusters) {
       resetPoints();
     }
   });
 
-  $numCentroids.blur(function() {
+  $numCentroids.blur(function () {
     var numCentroidsNew = parseInt($numCentroids.val(), 10);
     if (!isNaN(numCentroidsNew) && numCentroidsNew != numCentroids) {
       generateClusters();
@@ -123,15 +134,19 @@ $(function() {
   });
 
   function uncolorPoints() {
-    pointsGroup.selectAll('*').remove();
-    pointsGroup.selectAll('circle')
-      .data(points).enter()
-      .append('circle')
-      .attr('cx', function(d) {
+    pointsGroup.selectAll("*").remove();
+    pointsGroup
+      .selectAll("circle")
+      .data(points)
+      .enter()
+      .append("circle")
+      .attr("cx", function (d) {
         return d[0];
-      }).attr('cy', function(d) {
+      })
+      .attr("cy", function (d) {
         return d[1];
-      }).attr('r', 3);
+      })
+      .attr("r", 3);
   }
 
   function resetPoints() {
@@ -152,7 +167,11 @@ $(function() {
       var xNorm = d3.random.normal(randomCenter(width), variance);
       var yNorm = d3.random.normal(randomCenter(height), variance);
 
-      for (var j = 0; j < percentageClusteredPoints * NUM_POINTS / numClusters; j++) {
+      for (
+        var j = 0;
+        j < (percentageClusteredPoints * NUM_POINTS) / numClusters;
+        j++
+      ) {
         points.push([normalPt(xNorm), normalPt(yNorm)]);
       }
     }
@@ -165,9 +184,9 @@ $(function() {
 
     uncolorPoints();
     resetCentroidUpdateText();
-    voronoiGroup.selectAll('*').remove();
+    voronoiGroup.selectAll("*").remove();
 
-    $meanSquareValue.html('not yet calculated');
+    $meanSquareValue.html("not yet calculated");
   }
 
   // Randomly generates the clusters and initializes the d3 animation
@@ -185,19 +204,27 @@ $(function() {
     }
 
     // Render initial centroid display
-    centroidsGroup.selectAll('*').remove();
-    voronoiGroup.selectAll('*').remove();
+    centroidsGroup.selectAll("*").remove();
+    voronoiGroup.selectAll("*").remove();
 
-    centroidsGroup.selectAll('path')
-      .data(centroids).enter()
-      .append('path')
-      .attr('d', triangle)
-      .attr('fill', function(d, ndx){ return colors(ndx); })
-      .style('stroke', 'black')
-      .style('stroke-width', '0.7')
-      .attr('transform', function(d){ return 'translate(' + d[0] + ',' + d[1] + ')'; });
+    centroidsGroup
+      .selectAll("image")
+      .data(centroids)
+      .enter()
+      .append("image")
+      .attr("xlink:href", "truck.svg") // Update with your SVG path
+      .attr("width", 30) // Adjust width if needed, based on your desired size
+      .attr("height", 30) // Adjust height similarly
+      .attr("fill", function (d, ndx) {
+        return colors(ndx);
+      })
+      .style("stroke", "black")
+      .style("stroke-width", "0.7")
+      .attr("transform", function (d) {
+        return "translate(" + d[0] + "," + d[1] + ")";
+      });
 
-    $meanSquareValue.html('not yet calculated');
+    $meanSquareValue.html("not yet calculated");
   }
 
   // For each point, we find the centroid it is the closest to.
@@ -239,10 +266,11 @@ $(function() {
   function findClosestCentroidAnimation() {
     // TODO: This is terribly inefficient, fix later
     // Color the points according to the centroid to which they belong
-    pointsGroup.selectAll('*')
+    pointsGroup
+      .selectAll("*")
       .data(points)
       .transition()
-      .attr('fill', function(d, ndx){
+      .attr("fill", function (d, ndx) {
         for (var i = 0; i < centroidBins.length; i++) {
           if (centroidBins[i].indexOf(d) != -1) {
             return colors(i);
@@ -251,16 +279,19 @@ $(function() {
       });
 
     // Render voronoi
-    voronoiGroup.selectAll('*').remove();
+    voronoiGroup.selectAll("*").remove();
 
     // Comment these lines out to get rid of Voronoi
-    voronoiGroup.selectAll('path')
+    voronoiGroup
+      .selectAll("path")
       .data(d3.geom.voronoi(centroids))
-      .enter().append('path')
-      .style('fill', function(d, ndx) {
+      .enter()
+      .append("path")
+      .style("fill", function (d, ndx) {
         return colors(ndx);
-      }).attr('d', function(d) {
-        return 'M' + (d.join('L')) + 'Z';
+      })
+      .attr("d", function (d) {
+        return "M" + d.join("L") + "Z";
       });
   }
 
@@ -287,13 +318,24 @@ $(function() {
     meanSquaredDistance /= NUM_POINTS;
     $meanSquareValue.html(meanSquaredDistance.toFixed(2));
   }
-
   function updateCentroidAnimation() {
-    centroidsGroup.selectAll('path')
+    centroidsGroup
+      .selectAll("image")
       .data(centroids)
       .transition()
-      .attr('transform',function(d){ return 'translate(' + d[0] + ',' + d[1] + ')'; });
+      .attr("transform", function (d) {
+        return "translate(" + d[0] + "," + d[1] + ")";
+      });
   }
+  // function updateCentroidAnimation() {
+  //   centroidsGroup
+  //     .selectAll("path")
+  //     .data(centroids)
+  //     .transition()
+  //     .attr("transform", function (d) {
+  //       return "translate(" + d[0] + "," + d[1] + ")";
+  //     });
+  // }
 
   // Initial generation of clusters
   generateClusters();
@@ -303,7 +345,7 @@ $(function() {
   // Generate centers for dist centers and centroids
   function randomCenter(n) {
     return Math.random() * n;
-  };
+  }
 
   // Euclidean distance between points a and b
   function distance(a, b) {
@@ -312,8 +354,14 @@ $(function() {
 
   // Finds the average x value and average y value of all the points in arr
   function avgXY(arr) {
-    var avgX = d3.sum(arr, function(d) { return d[0]; }) / arr.length;
-    var avgY = d3.sum(arr, function(d) { return d[1]; }) / arr.length;
+    var avgX =
+      d3.sum(arr, function (d) {
+        return d[0];
+      }) / arr.length;
+    var avgY =
+      d3.sum(arr, function (d) {
+        return d[1];
+      }) / arr.length;
     return [avgX, avgY];
   }
 
