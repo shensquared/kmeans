@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>K-Means: Stepped Walkthrough</title>
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({ tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]} });
+    </script>
+    <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <style>
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: 'Palatino', 'Palatino Linotype', Georgia, serif;
+        background: #fff;
+        color: #000;
+        overflow: hidden;
+      }
+      .layout {
+        display: flex;
+        width: 100vw;
+        height: 100vh;
+        padding: 2vh 2vw;
+        gap: 2vw;
+      }
+      .left {
+        flex: 0 0 auto;
+        height: 100%;
+      }
+      #kmeans-vis {
+        height: min(92vh, 60vw);
+        width: min(92vh, 60vw);
+        border: 1px solid #e0e0e0;
+        background: #fafafa;
+      }
+      #kmeans-vis svg { display: block; }
+      .right {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .algo-title {
+        font-size: clamp(1em, 1.5vw, 1.4em);
+        margin-bottom: 0.6vh;
+      }
+      .algo {
+        font-size: clamp(1em, 1.4vw, 1.3em);
+        line-height: 1.55;
+        margin-bottom: 1vh;
+      }
+      .algo-line {
+        display: block;
+        padding: 1px 6px;
+        margin: 1px 0;
+        border-radius: 4px;
+        white-space: nowrap;
+        color: rgb(136, 136, 136);
+        transition: background-color 0.2s, color 0.2s;
+      }
+      .algo-line.active {
+        color: rgb(0, 0, 0);
+        background-color: rgba(245, 211, 40, 0.5);
+      }
+      .indent-1 { padding-left: 1.8em; }
+      .indent-2 { padding-left: 3.6em; }
+      .controls {
+        display: flex;
+        gap: 6px;
+        margin: 0.8vh 0 1.2vh 0;
+      }
+      .btn {
+        padding: 3px 10px;
+        font-family: inherit;
+        font-size: clamp(0.85em, 1.1vw, 1em);
+        border: 1px solid #888;
+        background: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .btn:hover:not([disabled]) { background: #f0f0f0; }
+      .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+      .btn.primary {
+        background: #6aa84f;
+        color: #fff;
+        border-color: #588a3f;
+      }
+      .btn.primary:hover:not([disabled]) { background: #588a3f; }
+      .status {
+        font-size: clamp(0.8em, 1vw, 0.95em);
+        color: #555;
+        margin-bottom: 1vh;
+      }
+      .data-controls {
+        font-size: clamp(0.8em, 1vw, 0.95em);
+        border-top: 1px solid #e0e0e0;
+        padding-top: 1vh;
+      }
+      .data-controls label {
+        display: inline-block;
+        margin-right: 12px;
+      }
+      .data-controls input[type="number"] {
+        width: 3.5em;
+        font-family: inherit;
+        font-size: inherit;
+        padding: 2px 4px;
+      }
+      .data-controls .row { margin-bottom: 0.6vh; }
+      .data-controls .btn { margin-right: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <div class="left">
+        <div id="kmeans-vis"></div>
+      </div>
+
+      <div class="right">
+        <div class="algo-title">K-MEANS\((k, \tau, \{x^{(i)}\}_{i=1}^n)\)</div>
+
+        <div class="algo">
+          <span class="algo-line" data-line="1">1&nbsp;&nbsp;&nbsp;\(\mu, y =\) random initialization</span>
+          <span class="algo-line" data-line="2">2&nbsp;&nbsp;&nbsp;<b>for</b> \(t = 1\) to \(\tau\)</span>
+          <span class="algo-line indent-1" data-line="3">3&nbsp;&nbsp;&nbsp;\(y_\text{old} = y\)</span>
+          <span class="algo-line indent-1" data-line="4">4&nbsp;&nbsp;&nbsp;<b>for</b> \(i = 1\) to \(n\)</span>
+          <span class="algo-line indent-2" data-line="5">5&nbsp;&nbsp;&nbsp;\(y^{(i)} = \arg\min_j \|x^{(i)} - \mu^{(j)}\|^2\)</span>
+          <span class="algo-line indent-1" data-line="6">6&nbsp;&nbsp;&nbsp;<b>for</b> \(j = 1\) to \(k\)</span>
+          <span class="algo-line indent-2" data-line="7">7&nbsp;&nbsp;&nbsp;\(\mu^{(j)} = \frac{1}{N_j} \sum_i \mathbf{1}(y^{(i)}=j)\, x^{(i)}\)</span>
+          <span class="algo-line indent-1" data-line="8">8&nbsp;&nbsp;&nbsp;<b>if</b> \(y == y_\text{old}\)</span>
+          <span class="algo-line indent-2" data-line="9">9&nbsp;&nbsp;&nbsp;<b>break</b></span>
+          <span class="algo-line" data-line="10">10&nbsp;&nbsp;<b>return</b> \(\mu, y\)</span>
+        </div>
+
+        <div class="status">
+          <span id="status-text">Ready. Click Next to begin.</span>
+        </div>
+
+        <div class="controls">
+          <button id="btn-prev" class="btn">◀ Previous</button>
+          <button id="btn-next" class="btn primary">Next ▶</button>
+          <button id="btn-play" class="btn">▶▶ Play</button>
+        </div>
+
+        <div class="data-controls">
+          <div class="row">
+            <label>\(k\): <input id="num-centroids" type="number" min="1" max="8" value="3" /></label>
+            <label>true clusters: <input id="num-clusters" type="number" min="1" max="8" value="3" /></label>
+          </div>
+          <div class="row">
+            <button id="new-points" class="btn">New points</button>
+            <button id="new-centroids" class="btn">New centroids</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="d3.min.js"></script>
+    <script src="kmeans-stepped.js"></script>
+  </body>
+</html>
