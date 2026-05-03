@@ -22,7 +22,6 @@
     .append("svg")
     .attr("width", width)
     .attr("height", height);
-  var voronoiGroup = svg.append("g").attr("id", "voronoi");
   var pointsGroup = svg.append("g").attr("id", "points");
   var centroidsGroup = svg.append("g").attr("id", "centroids");
 
@@ -31,7 +30,6 @@
   // Mutable state
   var points = [];        // [[x, y], ...]
   var centroids = [];     // [[x, y], ...]
-  var assignedCentroids = null; // centroid positions at time of last assignment (used for Voronoi)
   var assignments = [];   // assignments[i] = centroid index for point i
   var assignmentsOld = null;
   var phase = "init";     // 'init' | 'assign' | 'update' | 'check' | 'done'
@@ -65,7 +63,6 @@
   function snapshot() {
     return {
       centroids: clone(centroids),
-      assignedCentroids: assignedCentroids ? clone(assignedCentroids) : null,
       assignments: assignments.slice(),
       assignmentsOld: assignmentsOld ? assignmentsOld.slice() : null,
       phase: phase,
@@ -75,7 +72,6 @@
   }
   function restore(s) {
     centroids = clone(s.centroids);
-    assignedCentroids = s.assignedCentroids ? clone(s.assignedCentroids) : null;
     assignments = s.assignments.slice();
     assignmentsOld = s.assignmentsOld ? s.assignmentsOld.slice() : null;
     phase = s.phase;
@@ -130,7 +126,6 @@
       next[i] = minJ;
     }
     assignments = next;
-    assignedCentroids = clone(centroids);
   }
   function doUpdate() {
     var sums = centroids.map(function () { return [0, 0, 0]; }); // sx, sy, n
@@ -189,9 +184,10 @@
     stopPlay();
     if (opts && opts.points) generatePoints();
     if (opts && opts.centroids) generateCentroids();
-    assignments = [];
+    // Line 1: random assignment as part of initialization
+    var k = centroids.length;
+    assignments = points.map(function () { return Math.floor(Math.random() * k); });
     assignmentsOld = null;
-    assignedCentroids = null;
     phase = "init";
     iter = 0;
     converged = false;
@@ -203,7 +199,6 @@
   function render() {
     renderPoints();
     renderCentroids();
-    renderVoronoi();
     renderAlgo();
     renderStatus();
     renderButtons();
@@ -216,7 +211,7 @@
       .attr("cx", function (d) { return d[0]; })
       .attr("cy", function (d) { return d[1]; })
       .attr("fill", function (d, i) {
-        if (phase === "init" || assignments.length === 0) return "#777";
+        if (assignments.length === 0) return "#777";
         return colors(assignments[i]);
       });
     sel.exit().remove();
@@ -236,23 +231,6 @@
         return "translate(" + (d[0] - 14) + "," + (d[1] - 14) + ")";
       });
     sel.exit().remove();
-  }
-
-  function renderVoronoi() {
-    voronoiGroup.selectAll("*").remove();
-    if (!assignedCentroids || assignedCentroids.length < 2) return;
-    var poly = d3.geom.voronoi().clipExtent([[0, 0], [width, height]])(assignedCentroids);
-    voronoiGroup
-      .selectAll("path")
-      .data(poly)
-      .enter()
-      .append("path")
-      .attr("d", function (d) { return d ? "M" + d.join("L") + "Z" : null; })
-      .style("fill", function (d, i) { return colors(i); })
-      .style("fill-opacity", 0.08)
-      .style("stroke", function (d, i) { return colors(i); })
-      .style("stroke-opacity", 0.4)
-      .style("stroke-width", 1);
   }
 
   // Lines highlighted per phase
